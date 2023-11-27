@@ -1,0 +1,34 @@
+- doesn't need to be real research
+- doesn't need to model real life
+- the ideas in my head show movement
+- i want the rain/hydrology simulation from MayaSim
+- showing people moving around aswell, even if little dots.
+- maybe just adapt mayasim to be people instead of settlements.
+## Very generally speaking issues commonly addressed to ABM in archaeological research are
+- Socio-ecological dynamics
+- Spatial processes
+- Culture Change (long-time-perspective)
+- Social interaction
+	- emergence of social complexity
+	- evolution of sociality
+	- decision making
+### These can be subdivided into
+- Identifying drivers of historical change
+- Social complexity (e. g. emergence of hierarchies)
+- Emergence of centralized decision making
+- Population aggregation and abandonment (civilization collapse)
+- Emergence of specialization
+- Selfishness vs. altruism (e. g. food sharing)
+- Response to changing environmental and social conditions
+- Impact of ecological stress
+- Impact of population aggregation
+- System resilience
+- Mechanisms of adaptation
+- Emergence of territories
+- Settlement dynamics
+- Site selection
+- Resource management
+- Land use
+- Culture contact
+- Maintenance of ethnic boundaries
+- Formation of political entities 

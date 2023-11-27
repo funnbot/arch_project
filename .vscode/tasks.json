@@ -1,0 +1,21 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Trace executable 'sand'",
+            "type": "cargo",
+            "command": "run",
+            "args": [
+                "--release",
+                "--features",
+                "bevy/trace_chrome",
+            ],
+            "env": {
+                "CARGO_MANIFEST_DIR": "${workspaceFolder}",
+                "PATH": "${env:USERPROFILE}/.rustup/toolchains/nightly-x86_64-pc-windows-msvc/bin;${workspaceFolder}/target/release/deps;${env:PATH}",
+            },
+        }
+    ]
+}
