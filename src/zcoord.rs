@@ -1,8 +1,23 @@
+use bevy::{math::UVec2, reflect::Reflect};
+
+#[derive(Reflect, Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ZCoord {
     pub x: u16,
     pub y: u16,
 }
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ZIndex(u32);
+
+impl ZCoord {
+    pub fn to_index(self) -> ZIndex {
+        self.into()
+    }
+}
+impl ZIndex {
+    pub fn to_coord(self) -> ZCoord {
+        self.into()
+    }
+}
 
 impl From<(u16, u16)> for ZCoord {
     fn from(value: (u16, u16)) -> Self {
@@ -20,6 +35,32 @@ impl From<ZCoord> for ZIndex {
 impl From<ZIndex> for ZCoord {
     fn from(value: ZIndex) -> Self {
         coord_of(value.0).into()
+    }
+}
+impl From<UVec2> for ZCoord {
+    fn from(value: UVec2) -> Self {
+        Self {
+            x: value.x as u16,
+            y: value.y as u16,
+        }
+    }
+}
+impl From<ZCoord> for UVec2 {
+    fn from(value: ZCoord) -> Self {
+        Self {
+            x: value.x as u32,
+            y: value.y as u32,
+        }
+    }
+}
+impl From<u32> for ZIndex {
+    fn from(value: u32) -> Self {
+        Self(value)
+    }
+}
+impl From<usize> for ZIndex {
+    fn from(value: usize) -> Self {
+        Self(value as u32)
     }
 }
 

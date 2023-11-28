@@ -1,9 +1,10 @@
-use bevy::math::{Affine2, DVec2, IVec2, UVec2};
+use bevy::math::{Affine2, DAffine2, DVec2, IVec2, UVec2};
+use bevy::reflect::{Reflect, TypePath};
 
 /// GIS Coordinate
 pub struct Coord(pub DVec2);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Reflect, Debug, Clone, Copy, Default)]
 pub struct DRect {
     min: DVec2,
     max: DVec2,
@@ -33,6 +34,9 @@ impl DRect {
     pub fn height(&self) -> f64 {
         self.max.y - self.min.y
     }
+    pub fn size(&self) -> DVec2 {
+        self.max - self.min
+    }
     pub fn center(&self) -> DVec2 {
         (self.min + self.max) / 2.0
     }
@@ -55,6 +59,15 @@ pub struct CoordinateTransform {
     gis_center: DVec2,
     sim_center: DVec2,
     scale: DVec2,
+}
+
+pub fn coordinate_transform(from: DRect, to: DRect, equalize_scales: bool) -> DAffine2 {
+    let mut scale = DVec2::new(to.width() / from.width(), to.height() / from.height());
+    if equalize_scales {
+        scale = DVec2::splat(scale.min_element());
+    }
+    let translate = to.center() - from.center();
+    DAffine2::from_scale_angle_translation(scale, 0.0, translate)
 }
 
 impl CoordinateTransform {
@@ -87,7 +100,7 @@ impl CoordinateTransform {
 
 /// describes a grid area in GIS coordinates.
 /// useful for mapping a raster to a world grid.
-#[derive(Debug, Clone)]
+#[derive(Reflect, Debug, Clone, Default)]
 pub struct GridDimensions {
     /// grid size in cells
     size: UVec2,
@@ -98,9 +111,9 @@ pub struct GridDimensions {
 }
 
 impl GridDimensions {
-    pub fn from_cell_size(grid_size: UVec2, cell_size: DVec2, origin: DVec2) -> Self {
+    pub fn from_cell_size(grid_size: UVec2, cell_size: DVec2, ll_corner: DVec2) -> Self {
         assert!(grid_size != UVec2::ZERO);
-        let rect = DRect::new(origin, origin + (grid_size.as_dvec2() * cell_size));
+        let rect = DRect::new(ll_corner, ll_corner + (grid_size.as_dvec2() * cell_size));
         Self {
             size: grid_size,
             rect,
@@ -124,14 +137,25 @@ impl GridDimensions {
     }
     pub fn gis_to_grid(&self, coord: DVec2) -> DVec2 {
         let grid = (coord - *self.rect.min()) / self.cell_size;
-        assert!(grid.cmpge(DVec2::ZERO).all() && grid.cmple(self.size.as_dvec2()).all());
         grid
     }
     pub fn grid_to_gis(&self, coord: DVec2) -> DVec2 {
-        assert!(coord.cmpge(DVec2::ZERO).all() && coord.cmple(self.size.as_dvec2()).all());
         *self.rect.min() + coord * self.cell_size
     }
     pub fn rect(&self) -> &DRect {
         &self.rect
     }
+    pub fn grid_size(&self) -> &UVec2 {
+        &self.size
+    }
+    pub fn grid_width(&self) -> u32 {
+        self.size.x
+    }
+    pub fn grid_height(&self) -> u32 {
+        self.size.y
+    }
+}
+
+fn vec_inside_size(vec: &DVec2, size: &UVec2) -> bool {
+    vec.x >= 0. && vec.y >= 0. && vec.x <= size.x as f64 && vec.y <= size.y as f64
 }

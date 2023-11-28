@@ -1,14 +1,16 @@
 mod ascii_asset;
+mod drect;
 mod mayasim;
 mod pid_control;
 mod sim;
 mod sim_time;
 mod update_set;
 mod zcoord;
-mod drect;
+mod coord;
 
 use std::time::Duration;
 
+use ascii_asset::AsciiAssetPlugin;
 use bevy::asset::AssetServer;
 use bevy::ecs::schedule::ScheduleLabel;
 use bevy::prelude::*;
@@ -48,8 +50,7 @@ pub fn main() {
         )
         .add_plugins(EguiPlugin)
         .add_plugins(WorldInspectorPlugin::new())
-        .init_asset::<ascii_asset::AsciiAsset>()
-        .register_asset_loader(ascii_asset::AsciiAssetLoader)
+        .add_plugins(AsciiAssetPlugin)
         .configure_sets(
             Update,
             (
@@ -60,26 +61,25 @@ pub fn main() {
             ),
         )
         .add_plugins(sim_time::SimTimePlugin)
+        .add_plugins(sim::SimPlugin)
         .add_systems(Startup, startup)
-        .add_systems(Update, avoid_neighbors)
         .run();
 }
 
 fn startup(mut commands: Commands, assets: Res<AssetServer>) {
     commands.spawn(Camera2dBundle::default());
-    let tex = assets.load("arrow.png");
-    for i in 0..200 {
-        commands.spawn(HumanBundle {
-            agent: HumanAgent,
-            gfx: SpriteBundle {
-                transform: Transform::from_xyz((i % 10) as f32 * 15.0, (i / 10) as f32 * 15.0, 0.0),
-                texture: tex.clone(),
-                ..default()
-            },
-            tracked: TrackedByKDTree,
-        });
-    }
-    let temp = assets.load::<ascii_asset::AsciiAsset>("temp.asc");
+    // let tex = assets.load("arrow.png");
+    // for i in 0..200 {
+    //     commands.spawn(HumanBundle {
+    //         agent: HumanAgent,
+    //         gfx: SpriteBundle {
+    //             transform: Transform::from_xyz((i % 10) as f32 * 15.0, (i / 10) as f32 * 15.0, 0.0),
+    //             texture: tex.clone(),
+    //             ..default()
+    //         },
+    //         tracked: TrackedByKDTree,
+    //     });
+    // }
 }
 
 #[derive(Bundle)]

@@ -11,7 +11,7 @@ WritableRaster raster = Raster.createWritableRaster(sampleModel, data, null);
 
 var9 = new RasterDataset(raster, dimensions, srcProj, dstProj);
 ```
-
+# Applying the raster to the map
 ```java
 RasterDataset dataset = RasterDataset.getDataset(args[0]);
 World world = context.getAgent().world();
@@ -32,6 +32,32 @@ for(int ix = 0; px <= world.maxPxcor(); ++ix) {
     }
 
     ++px;
+}
+```
+## Translated to rust
+```rust
+let rasterSize: UVec2;
+let gridSize: UVec2;
+let worldRect: DRect;
+
+let mut px = worldRect.min().x;
+let mut ix = 0;
+while px <= worldRect.max().x {
+    let py = worldRect.min().y;
+    let iy = rasterSize.height() - 1;
+
+    while py <= worldRect.max().y {
+        let cell = world.get_cell(px, py);
+        let value = raster.sample_double(ix, iy);
+        
+        f(&mut cell, value);
+
+        iy -= 1;
+        py += 1;
+    }
+
+    ix += 1;
+    px += 1;
 }
 ```
 

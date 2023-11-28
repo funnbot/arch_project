@@ -1,4 +1,5 @@
 use bevy::app::App;
+use bevy::ecs::reflect::ReflectResource;
 use bevy::ecs::schedule::{IntoSystemConfigs, Schedule, ScheduleLabel};
 use bevy::ecs::system::{ResMut, Resource};
 use bevy::ecs::world::World;
@@ -8,13 +9,15 @@ use bevy::time::{Time, Virtual};
 use bevy::utils::tracing::field::display;
 use bevy::utils::{Duration, Instant};
 use bevy_egui::{egui, EguiContexts};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 use crate::update_set::UpdateSet;
 
 #[derive(ScheduleLabel, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SimUpdate;
 
-#[derive(Resource, Debug, Copy, Clone, Reflect)]
+#[derive(Reflect, Resource, Debug, Copy, Clone, Hash, PartialEq, Eq)]
+#[reflect(Resource)]
 pub struct SimulatedTime {
     // sim time
     elapsed_sec: u64,
@@ -123,6 +126,7 @@ impl bevy::prelude::Plugin for SimTimePlugin {
         let sim_update = Schedule::new(SimUpdate);
         app.add_schedule(sim_update)
             .init_resource::<SimulatedTime>()
+            .register_type::<SimulatedTime>()
             .add_systems(
                 bevy::prelude::Update,
                 run_sim_update_schedule.in_set(UpdateSet::Sim),
