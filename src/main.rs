@@ -1,16 +1,7 @@
-mod ascii_asset;
-mod drect;
-mod mayasim;
-mod pid_control;
-mod sim;
-mod sim_time;
-mod update_set;
-mod zcoord;
-mod coord;
-
 use std::time::Duration;
 
-use ascii_asset::AsciiAssetPlugin;
+use arch_project::*;
+use ascii_grid::AsciiGridPlugin;
 use bevy::asset::AssetServer;
 use bevy::ecs::schedule::ScheduleLabel;
 use bevy::prelude::*;
@@ -21,9 +12,6 @@ use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_spatial::kdtree::KDTree2;
 use bevy_spatial::{AutomaticUpdate, SpatialAccess, TransformMode};
-
-use crate::pid_control::Pid32;
-use crate::update_set::UpdateSet;
 
 #[derive(Component, Default)]
 struct TrackedByKDTree;
@@ -50,36 +38,18 @@ pub fn main() {
         )
         .add_plugins(EguiPlugin)
         .add_plugins(WorldInspectorPlugin::new())
-        .add_plugins(AsciiAssetPlugin)
-        .configure_sets(
-            Update,
-            (
-                UpdateSet::Pre,
-                UpdateSet::Sim,
-                UpdateSet::Post,
-                UpdateSet::Egui,
-            ),
-        )
-        .add_plugins(sim_time::SimTimePlugin)
-        .add_plugins(sim::SimPlugin)
-        .add_systems(Startup, startup)
+        .add_plugins(AsciiGridPlugin)
+        .add_plugins(MyPlugin)
+        .add_plugins(sim::SimTimePlugin)
+        //.add_plugins(sim_old::SimPlugin)
+        .add_plugins(sim::MapPlugin)
+        .add_systems(Startup, (startup, crate::ui::set_egui_style_system))
+        .add_systems(Update, crate::ui::camera::camera_system)
         .run();
 }
 
-fn startup(mut commands: Commands, assets: Res<AssetServer>) {
+fn startup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
-    // let tex = assets.load("arrow.png");
-    // for i in 0..200 {
-    //     commands.spawn(HumanBundle {
-    //         agent: HumanAgent,
-    //         gfx: SpriteBundle {
-    //             transform: Transform::from_xyz((i % 10) as f32 * 15.0, (i / 10) as f32 * 15.0, 0.0),
-    //             texture: tex.clone(),
-    //             ..default()
-    //         },
-    //         tracked: TrackedByKDTree,
-    //     });
-    // }
 }
 
 #[derive(Bundle)]

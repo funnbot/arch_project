@@ -137,17 +137,34 @@ to setup-gis
   gis:apply-raster soils-dataset soil-prod
   gis:apply-raster temp-dataset temp
   gis:apply-raster precip-dataset original-rainfall
-  ask patches [  ifelse (soil-prod <= 0) or (soil-prod >= 0)   [ ] [ set soil-prod 1.5   ] if elevation <= 1 [set soil-prod 1.5]  if soil-prod >= 6 [  set soil-prod 1.5]    ]
-  ask patches [  ifelse (elevation <= 0) or (elevation >= 0)  [ set is-land-patch 1] [ set elevation 0 ]  ]
-  ask patches [  ifelse (temp <= 0) or (temp >= 0)  [  ] [ set temp 21 * 12 ]  ]
-  ask patches [  ifelse (original-rainfall <= 0) or (original-rainfall >= 0)  [ ] [ set original-rainfall 1200 ]  ]
+  ; the (x <= 0) or (x >= 0) seems to be a pattern for null or NaN checking.
+  ; assuming this is for fixing locations with the nodata_value
+  ;
+  ; ifelse cond [ true block ] [ false block ]
+  ask patches [  
+      ifelse (soil-prod <= 0) or (soil-prod >= 0)   [ ] [ set soil-prod 1.5   ] 
+      if elevation <= 1 [set soil-prod 1.5]  if soil-prod >= 6 [  set soil-prod 1.5]    
+  ]
+  ask patches [  
+    ifelse (elevation <= 0) or (elevation >= 0)  [ set is-land-patch 1] [ set elevation 0 ]  
+  ]
+  ask patches [ 
+    ifelse (temp <= 0) or (temp >= 0)  [  ] [ set temp 21 * 12 ]  
+  ]
+  ask patches [  
+    ifelse (original-rainfall <= 0) or (original-rainfall >= 0) 
+      [ ] 
+      [ set original-rainfall 1200 ]  
+  ]
   set land-patches patches with [ is-land-patch  = 1 ]
   set border (land-patches with [ (sum [is-land-patch] of neighbors < 6) ])
   ask border [set is-border 1]
   set area ( 516484  / (count land-patches)) ; Km2
   ask land-patches [
     set rainfall original-rainfall
-    set temp temp / 12]
+    set temp temp / 12
+  ]
+  ; Tells each patch to give equal shares of (number * 100) percent of the value of patch-variable to its eight neighboring patches. number should be between 0 and 1. Regardless of topology the sum of patch-variable will be conserved across the world. (If a patch has fewer than eight neighbors, each neighbor still gets an eighth share; the patch keeps any leftover shares.) 
   repeat  max-pxcor / 20 [diffuse  soil-prod 0.9]
   calculate-slope
 end
@@ -188,6 +205,7 @@ to setup-settlements
 end
 
 to calculate-slope
+  ; convole <dataset> <rows> <cols> <matrix> <centerRow> <centerCol>
   let horizontal-gradient gis:convolve elevation-dataset 3 3 [ 1 0 -1 2 0 -2 1 0 -1 ] 1 1
   let vertical-gradient gis:convolve elevation-dataset 3 3 [ 1 2 1 0 0 0 -1 -2 -1 ] 1 1
   let gradient gis:create-raster gis:width-of elevation-dataset gis:height-of elevation-dataset gis:envelope-of elevation-dataset
@@ -205,8 +223,10 @@ to calculate-slope
   let max-g gis:maximum-of gradient
   gis:apply-raster gradient slope
   ask land-patches [
+    ; If number is positive, reports a random integer greater than or equal to 0, but strictly less than number.
     ifelse (slope <= 0) or (slope >= 0)  [ ] [ set slope (5 + random 10 ) ]
-    set slope log (slope + 1) 2]
+    set slope log (slope + 1) 2
+  ]
 end
 
 ;##############       RUN        ##################         RUN       ##################

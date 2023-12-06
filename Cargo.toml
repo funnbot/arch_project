@@ -12,6 +12,7 @@ include = ["/src/**/*", "/Cargo.toml"]
 # needed to compare with non bmi2 implementations on Zen 1/2,
 # as these instructions use microcode on these CPUs
 bmi2 = []
+serialize = ["bevy/serialize"]
 
 [dependencies]
 bevy_egui = "0.23"
@@ -20,6 +21,7 @@ bevy-inspector-egui = { version = "0.21.0", default-features = false }
 bevy_spatial = "0.7.0"
 zorder = "0.1.0"
 image = "0.24.7"
+thiserror = "1.0.50"
 
 [dependencies.bevy]
 version = "0.12"

@@ -7,10 +7,11 @@
 - [ ] How to add a plugin to the SimUpdate schedule without importing it?
 	- Pass in the `ScheduleLabel` some how.
 	- Although, most plugins define their own schedule if they require it, `FixedUpdate` is special case, and is accessed globally.
-- [ ] create `sim` folder for simulation code.
+- [x] create `sim` folder for simulation code.
 - [ ] design
 	- [ ] create a system that loads all of the ascii grid data and stores the ids in a resource
 		- [ ] system that reads asset loading events to check when the data is loaded.
 	- [ ] use AppStates for loading and begin simulation
 	- [ ] system that applies the GIS data to the map.
 	- [ ] system that renders the map with different options, 
+- [ ] check if egui is using inputs with `InputState`
