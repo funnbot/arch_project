@@ -1,6 +1,7 @@
 use bevy::math::{IVec2, UVec2};
 
 use crate::math::{USize2, ZCoord};
+
 // UL, UM, ML, UR, MR, LL, LM, LR
 pub const UL: IVec2 = IVec2::new(1, -1);
 pub const UM: IVec2 = IVec2::new(1, 0);

@@ -112,6 +112,7 @@ migrants-own [
   parent]
 
 to startup
+ ;Combines the effects of clear-globals, clear-ticks, clear-turtles, clear-patches, clear-drawing, clear-all-plots, and clear-output
   clear-all
   reset-ticks
   setup-gis

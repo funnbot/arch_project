@@ -4,14 +4,16 @@ pub mod ascii_grid;
 pub mod math;
 pub mod pid_control;
 pub mod sim;
-pub mod sim_old;
 pub mod ui;
+pub mod utils;
 
+mod rand;
 mod schedule;
 
-pub use schedule::{MyAssets, MyPlugin, MyUpdate, MyStates};
+pub use rand::{GlobalRng, RngComponent};
+pub use schedule::{MyAssets, MyPlugin, MyStates, MyUpdate};
 
-pub mod preludes {
+pub(crate) mod preludes {
     pub mod core {
         pub use bevy::log::{debug, error, info, warn};
         pub use bevy::reflect;

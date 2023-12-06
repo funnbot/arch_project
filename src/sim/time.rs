@@ -1,12 +1,16 @@
-use bevy::app::{App, MainScheduleOrder};
-use bevy::ecs::reflect::ReflectResource;
-use bevy::ecs::schedule::{IntoSystemConfigs, Schedule, ScheduleLabel};
-use bevy::ecs::system::{ResMut, Resource};
-use bevy::ecs::world::World;
-use bevy::prelude::{Res, Update, *};
-use bevy::reflect::Reflect;
-use bevy::time::{Time, Virtual};
-use bevy::utils::{Duration, Instant};
+use bevy::{
+    app::{App, MainScheduleOrder},
+    ecs::{
+        reflect::ReflectResource,
+        schedule::{IntoSystemConfigs, Schedule, ScheduleLabel},
+        system::{ResMut, Resource},
+        world::World,
+    },
+    prelude::{Res, Update, *},
+    reflect::Reflect,
+    time::{Time, Virtual},
+    utils::{Duration, Instant},
+};
 use bevy_egui::{egui, EguiContexts};
 
 use crate::MyUpdate;
@@ -55,6 +59,9 @@ impl SimulatedTime {
     }
     pub fn elapsed_days(&self) -> f64 {
         days_from_sec(self.elapsed_sec)
+    }
+    pub fn elapsed_ticks(&self) -> u64 {
+        self.elapsed_ticks
     }
 
     fn sim_begin(&mut self) {
@@ -152,7 +159,7 @@ fn run_sim_update_schedule(world: &mut World) {
 
 fn do_something_expensive(mut time: ResMut<SimulatedTime>) {
     let mut x = 0;
-    for _ in 0..10000000 {
+    for _ in 0..10000 {
         x += 1;
         time.real_last_sim_time = Duration::from_secs(x);
     }

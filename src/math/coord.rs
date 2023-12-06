@@ -142,8 +142,8 @@ pub trait Space: Sized {
 
 impl Space for GameSpace {
     type Coord2 = Vec2;
-    type Index2 = !;
-    type Index = !;
+    type Index2 = UVec2;
+    type Index = usize;
 }
 impl Space for ScreenSpace {
     type Coord2 = !;

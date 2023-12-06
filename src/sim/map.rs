@@ -1,27 +1,26 @@
 use std::ops::RangeInclusive;
 
-use bevy::ecs::schedule::OnEnter;
-use bevy::math::{DVec3, IVec2};
-use bevy::render::color::Color;
-use bevy::render::texture::{Image, ImageSampler};
-use bevy::sprite::{Sprite, SpriteBundle};
-use bevy::transform::components::Transform;
+use bevy::{
+    ecs::schedule::OnEnter,
+    math::{DVec3, IVec2},
+    render::{
+        color::Color,
+        texture::{Image, ImageSampler},
+    },
+    sprite::{Sprite, SpriteBundle},
+    transform::components::Transform,
+};
 use bevy_egui::egui::{lerp, remap};
 
-use super::cell::Cell;
-use super::n8;
-use crate::math::coord::{
-    flatten_index2, GeoGridSpace, IndexTransform, MapIndex2, MapSpace, Transformer,
+use super::{cell::Cell, n8};
+use crate::{
+    math::{
+        coord::{flatten_index2, GeoGridSpace, IndexTransform, MapIndex2, MapSpace, Transformer},
+        ZCoord, ZIndex,
+    },
+    preludes::{asset::*, cond::*, core::*, image::*, math::*, plugin::*, system::*},
+    GlobalRng, MyAssets, MyStates, MyUpdate,
 };
-use crate::math::{ZCoord, ZIndex};
-use crate::preludes::asset::*;
-use crate::preludes::cond::*;
-use crate::preludes::core::*;
-use crate::preludes::image::*;
-use crate::preludes::math::*;
-use crate::preludes::plugin::*;
-use crate::preludes::system::*;
-use crate::{MyAssets, MyStates, MyUpdate};
 
 #[derive(Resource, reflect::Reflect, Debug, Default)]
 #[reflect(Resource)]
@@ -30,20 +29,53 @@ pub struct Map {
     cells: Vec<Cell>,
     space: MapSpace,
     modified: bool,
+    land_cell_count: u32,
 }
 
 impl Map {
-    fn cell_iter(&self) -> impl Iterator<Item = &Cell> {
+    pub fn space(&self) -> &MapSpace {
+        &self.space
+    }
+    pub fn cell_iter(&self) -> impl Iterator<Item = &Cell> {
         let grid_size = self.space.grid_size();
         self.cells
             .iter()
             .filter(|&cell| grid_size.bounds_check(cell.coord.into()))
     }
-    fn cell_iter_mut(&mut self) -> impl Iterator<Item = &mut Cell> {
+    pub fn cell_iter_mut(&mut self) -> impl Iterator<Item = &mut Cell> {
         let grid_size = self.space.grid_size();
         self.cells
             .iter_mut()
             .filter(|cell| grid_size.bounds_check(cell.coord.into()))
+    }
+    pub fn cell_land_iter(&self) -> impl Iterator<Item = &Cell> {
+        let grid_size = self.space.grid_size();
+        self.cells
+            .iter()
+            .filter(|&cell| grid_size.bounds_check(cell.coord.into()) && cell.is_land)
+    }
+    pub fn cell_land_iter_mut(&mut self) -> impl Iterator<Item = &mut Cell> {
+        let grid_size = self.space.grid_size();
+        self.cells
+            .iter_mut()
+            .filter(|cell| grid_size.bounds_check(cell.coord.into()) && cell.is_land)
+    }
+    pub fn cell_n8_iter_mut<Filter: Fn(&Cell) -> bool>(
+        &mut self,
+        filter_fn: Filter,
+    ) -> impl Iterator<Item = (&mut Cell, [Option<&mut Cell>; 8])> {
+        let grid_size = *self.space.grid_size();
+
+        let cells_ptr: *mut [Cell] = self.cells.as_mut_slice();
+
+        self.cells
+            .iter_mut()
+            .filter(move |cell| grid_size.bounds_check(cell.coord.into()) && filter_fn(cell))
+            .map(move |cell| {
+                let n8_indices = n8::zorder_n8_indices(cell.coord.into(), grid_size);
+                let n8s = unsafe { n8::slice_get_many_unchecked_mut(&mut *cells_ptr, n8_indices) };
+                (cell, n8s)
+            })
     }
     fn set_cell_layout(&mut self, size: UVec2, view_rect: DRect) {
         let len = zorder_data_len(size);
@@ -59,7 +91,7 @@ impl Map {
         assert!(size.x as usize * size.y as usize <= zorder_data_len(size));
     }
     /// iterate all cells in the map, and sample the ascii grid data at each cell
-    fn load_ascii_grid<F: Fn(&mut Cell, Option<i16>)>(&mut self, asset: &AsciiGrid, f: F) {
+    fn load_ascii_grid<F: FnMut(&mut Cell, Option<i16>)>(&mut self, asset: &AsciiGrid, mut f: F) {
         let transform = Transformer::<MapSpace, GeoGridSpace>::new(&self.space, asset.space());
 
         for cell in self.cells.iter_mut() {
@@ -167,6 +199,13 @@ impl Map {
         }
         c
     }
+    pub fn n8_count_with<F: Fn(&Cell) -> bool>(&self, coord: MapIndex2, f: F) -> u8 {
+        self.get_neighbor8(coord)
+            .iter()
+            .flatten()
+            .filter(|&&c| f(c))
+            .count() as u8
+    }
     /// storage is a temporary vector that will be cleared
     ///
     /// for each cell
@@ -226,8 +265,6 @@ impl Map {
         let grid_size = *self.space.grid_size();
         let mut n8_indices: [isize; 8];
         let n8_offsets = n8::zorder_n8_offsets();
-        // column major
-        let mut mat: [DVec3; 3] = [default(); 3];
 
         output.clear();
         let out_len = grid_size.total_size();
@@ -235,7 +272,7 @@ impl Map {
             output.reserve_exact(out_len - output.capacity());
         }
         let out = output.spare_capacity_mut();
-        for (zidx, cell) in self.cells.iter().enumerate() {
+        for cell in self.cells.iter() {
             let coord = MapIndex2(cell.coord.into());
             if !grid_size.bounds_check(coord.0) {
                 continue;
@@ -245,13 +282,15 @@ impl Map {
             let cell_ns =
                 unsafe { n8::slice_get_many_unchecked(self.cells.as_slice(), n8_indices) };
 
-            let mut sum: f64 = get_fn(cell);
+            let mut sum: f64 = get_fn(cell) * kernel[1][1];
             for (i, c) in cell_ns.iter().enumerate() {
                 if let Some(c) = *c {
                     let k_index2 = n8_offsets[i] + IVec2::ONE;
-                    let kernal_v = kernel[k_index2.y as usize][k_index2.x as usize];
-                    let mul_v = get_fn(c) * kernal_v;
-                    sum += mul_v;
+                    let kernel_v = kernel[k_index2.y as usize][k_index2.x as usize];
+                    if kernel_v != 0.0 {
+                        let mul_v = get_fn(c) * kernel_v;
+                        sum += mul_v;
+                    }
                 }
             }
             let grid_index = coord.0.x as usize + grid_size.width() as usize * coord.0.y as usize;
@@ -289,7 +328,7 @@ impl Map {
             let idx = flatten_index2(index2, grid_size.width());
             let grad_mag = DVec2::new(horiz_grad[idx], vert_grad[idx]).length();
             let grad_mag = (grad_mag + 1.0).log2();
-            cell.slope = grad_mag;
+            cell.slope = grad_mag as f32;
         }
         for y in 0..grid_size.height() as usize {
             for x in 0..grid_size.width() as usize {
@@ -299,6 +338,11 @@ impl Map {
 
                 horiz_grad[idx] = DVec2::new(gx, gy).length();
             }
+        }
+    }
+    fn setup_land_cells(&mut self) {
+        for cell in self.cell_iter_mut().filter(|c| c.is_land) {
+            todo!();
         }
     }
 }
@@ -312,22 +356,6 @@ fn apply_geo_data_to_map(
     ascii_assets: &Assets<AsciiGrid>,
     image_assets: &Assets<Image>,
 ) {
-}
-
-fn on_running(
-    mut commands: Commands,
-    ascii_assets: Res<Assets<AsciiGrid>>,
-    mut image_assets: ResMut<Assets<Image>>,
-    my_assets: Res<MyAssets>,
-    mut map: ResMut<Map>,
-) {
-    apply_geo_data_to_map(
-        map.as_mut(),
-        my_assets.as_ref(),
-        ascii_assets.as_ref(),
-        image_assets.as_ref(),
-    );
-
     map.set_cell_layout(
         UVec2::new(401, 433),
         DRect::from_corners((-200., -216.).into(), (200., 216.).into()),
@@ -336,11 +364,16 @@ fn on_running(
     let background = image_assets.get(my_assets.background.id()).unwrap();
     map.load_color(background);
 
+    let mut land_cell_count: u32 = 0;
     let elevation = ascii_assets.get(my_assets.elevation.id()).unwrap();
     map.load_ascii_grid(elevation, |cell, sample| {
         cell.elevation = sample.unwrap_or(0) as i32;
-        cell.is_land = sample.is_some();
+        if sample.is_some() {
+            cell.is_land = true;
+            land_cell_count += 1;
+        }
     });
+    map.land_cell_count = land_cell_count;
 
     let temperature = ascii_assets.get(my_assets.temperature.id()).unwrap();
     map.load_ascii_grid(temperature, |cell, sample| {
@@ -349,7 +382,7 @@ fn on_running(
 
     let precip = ascii_assets.get(my_assets.precipitation.id()).unwrap();
     map.load_ascii_grid(precip, |cell, sample| {
-        cell.original_rainfall = sample.unwrap_or(1200) as i32;
+        cell.original_rainfall = sample.unwrap_or(1200) as f32;
         if cell.is_land {
             cell.rainfall = cell.original_rainfall;
         }
@@ -362,7 +395,6 @@ fn on_running(
             cell.soil_prod = 1.5;
         }
     });
-    let mut image = Image::default();
 
     let mut temp = Vec::new();
     let diffuse_iters = (map.space.rect().max.x / 20.0) as usize;
@@ -380,6 +412,23 @@ fn on_running(
     }
 
     map.calculate_slope();
+}
+
+fn on_running(
+    mut commands: Commands,
+    ascii_assets: Res<Assets<AsciiGrid>>,
+    mut image_assets: ResMut<Assets<Image>>,
+    my_assets: Res<MyAssets>,
+    mut map: ResMut<Map>,
+) {
+    apply_geo_data_to_map(
+        map.as_mut(),
+        my_assets.as_ref(),
+        ascii_assets.as_ref(),
+        image_assets.as_ref(),
+    );
+
+    let mut image = Image::default();
 
     map.visualize_cell_field(&mut image, |cell| {
         color_lerp_lightness(

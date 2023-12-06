@@ -19,9 +19,12 @@ bevy_egui = "0.23"
 egui_plot = "0.23"
 bevy-inspector-egui = { version = "0.21.0", default-features = false }
 bevy_spatial = "0.7.0"
+bevy_rand = "0.4"
+bevy_prng = { version = "0.2", features = ["wyrand"] }
 zorder = "0.1.0"
 image = "0.24.7"
 thiserror = "1.0.50"
+
 
 [dependencies.bevy]
 version = "0.12"
@@ -51,13 +54,16 @@ debug = 2
 # Enable high optimizations for dependencies (incl. Bevy), but not for our code:
 [profile.dev.package."*"]
 opt-level = 3
+debug = 1
+
+[profile.dev.build-override]
+opt-level = 3
 
 [profile.release]
-# lto = "thin"
 debug = 1
 
 [workspace]
 resolver = "2"
 
-[workspace.package."*"]
-publish = false
+# [workspace.package."*"]
+# publish = false

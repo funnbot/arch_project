@@ -2,16 +2,24 @@ use std::time::Duration;
 
 use arch_project::*;
 use ascii_grid::AsciiGridPlugin;
-use bevy::asset::AssetServer;
-use bevy::ecs::schedule::ScheduleLabel;
-use bevy::prelude::*;
-use bevy::render::settings::{Backends, RenderCreation, WgpuSettings};
-use bevy::render::RenderPlugin;
-use bevy::window::PrimaryWindow;
+use bevy::{
+    asset::AssetServer,
+    ecs::{
+        query::{ReadOnlyWorldQuery, WorldQuery},
+        schedule::ScheduleLabel,
+    },
+    prelude::*,
+    render::{
+        settings::{Backends, RenderCreation, WgpuSettings},
+        RenderPlugin,
+    },
+    window::PrimaryWindow,
+};
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_spatial::kdtree::KDTree2;
-use bevy_spatial::{AutomaticUpdate, SpatialAccess, TransformMode};
+use bevy_prng::WyRand;
+use bevy_rand::plugin::EntropyPlugin;
+use bevy_spatial::{kdtree::KDTree2, AutomaticUpdate, SpatialAccess, TransformMode};
 
 #[derive(Component, Default)]
 struct TrackedByKDTree;
@@ -36,13 +44,12 @@ pub fn main() {
                 .with_transform(TransformMode::GlobalTransform)
                 .with_spatial_ds(bevy_spatial::SpatialStructure::KDTree2),
         )
+        .add_plugins(EntropyPlugin::<WyRand>::with_seed([13u8; 8]))
         .add_plugins(EguiPlugin)
         .add_plugins(WorldInspectorPlugin::new())
         .add_plugins(AsciiGridPlugin)
         .add_plugins(MyPlugin)
-        .add_plugins(sim::SimTimePlugin)
-        //.add_plugins(sim_old::SimPlugin)
-        .add_plugins(sim::MapPlugin)
+        .add_plugins(sim::SimPlugin)
         .add_systems(Startup, (startup, crate::ui::set_egui_style_system))
         .add_systems(Update, crate::ui::camera::camera_system)
         .run();
