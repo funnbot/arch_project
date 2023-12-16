@@ -1,2 +1,2 @@
-- Create the simplist possible implementation.
+- Create the simplest possible implementation.
 - Don't create traits or interfaces until you have at least two implementations.

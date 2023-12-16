@@ -281,22 +281,36 @@ end
 to rain
   ask raindrops [die]
   ask land-patches [
-    set flow 0]
+    set flow 0
+  ]
+
   ask n-of ((count land-patches) * precip-percent) land-patches [
     sprout-raindrops 1 [
       set color blue
       set rain-volume ( rainfall / 1000000 / precip-percent * 10) ; cubic km2  # conversion
-      set size rain-volume * 30  ]]
+      set size rain-volume * 30  
+    ]
+  ]
+
   repeat rain-steps   [
     ask raindrops [
       if random-float 100 < Infitration [die]
+      ; neighbors: reports an agentset containing the 8 surrounding patches
       let target min-one-of neighbors [ elevation + ((sum [rain-volume] of raindrops-here) ) ]
-      ifelse [elevation + ((sum [rain-volume] of raindrops-here) )] of target < elevation + ((sum [rain-volume] of raindrops-here) )[
+      ifelse 
+        [elevation + ((sum [rain-volume] of raindrops-here) )] of target <
+         elevation + ((sum [rain-volume] of raindrops-here) )
+      [
         set color blue
         move-to target
         ask patch-here [ set flow (flow + ([rain-volume] of myself ) )]
-        if [is-land-patch] of patch-here = 0 or [is-border] of patch-here = 1 [die] ][
-        set color green ]]] ; and don't count flow... ;
+        if [is-land-patch] of patch-here = 0 or [is-border] of patch-here = 1 [die] 
+      ] [
+        set color green 
+      ]
+    ]
+  ] ; and don't count flow... ;
+
   ask raindrops [die]
 end
 

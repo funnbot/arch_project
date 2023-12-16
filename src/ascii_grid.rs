@@ -1,16 +1,21 @@
 use std::str::FromStr;
 
-use bevy::asset::io::*;
-use bevy::asset::{AssetLoader, ReflectAsset};
-use bevy::math::{DVec2, DVec4};
-use bevy::prelude::*;
-use bevy::render::extract_component::DynamicUniformIndex;
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use bevy::render::texture::Image;
-use bevy::utils::thiserror;
+use bevy::{
+    asset::{io::*, AssetLoader, ReflectAsset},
+    math::{DVec2, DVec4},
+    prelude::*,
+    render::{
+        extract_component::DynamicUniformIndex,
+        render_resource::{Extent3d, TextureDimension, TextureFormat},
+        texture::Image,
+    },
+    utils::thiserror,
+};
 
-use crate::math::coord::{GeoCoord2, GeoGridSpace, GeoIndex2, GridTransform, IndexTransform};
-use crate::math::DRect;
+use crate::math::{
+    coord::{GeoCoord2, GeoGridSpace, GeoIndex2, GridTransform, IndexTransform},
+    DRect,
+};
 
 /// Ascii Grid Asset
 #[derive(Reflect, Asset, Debug)]

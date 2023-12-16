@@ -1,5 +1,4 @@
-use bevy::math::UVec2;
-use bevy::reflect::Reflect;
+use bevy::{math::UVec2, reflect::Reflect};
 
 #[derive(Reflect, Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ZCoord {
@@ -10,6 +9,12 @@ pub struct ZCoord {
 pub struct ZIndex(pub u32);
 
 impl ZCoord {
+    pub fn new(x: u32, y: u32) -> Self {
+        Self {
+            x: x as u16,
+            y: y as u16,
+        }
+    }
     pub fn to_index(self) -> ZIndex {
         self.into()
     }

@@ -1,9 +1,3 @@
-- doesn't need to be real research
-- doesn't need to model real life
-- the ideas in my head show movement
-- i want the rain/hydrology simulation from MayaSim
-- showing people moving around aswell, even if little dots.
-- maybe just adapt mayasim to be people instead of settlements.
 ## Very generally speaking issues commonly addressed to ABM in archaeological research are
 - Socio-ecological dynamics
 - Spatial processes

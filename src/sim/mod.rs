@@ -1,5 +1,6 @@
 mod agent;
 mod cell;
+mod cell_grid;
 mod climate;
 mod config;
 mod map;

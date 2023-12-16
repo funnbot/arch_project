@@ -1,3 +1,5 @@
+use std::ptr::NonNull;
+
 use bevy::math::{IVec2, UVec2};
 
 use crate::math::{USize2, ZCoord};
@@ -11,6 +13,18 @@ pub const MR: IVec2 = IVec2::new(0, 1);
 pub const LL: IVec2 = IVec2::new(-1, -1);
 pub const LM: IVec2 = IVec2::new(-1, 0);
 pub const LR: IVec2 = IVec2::new(-1, 1);
+
+/// UL, UM, ML, UR, MR, LL, LM, LR
+pub const I8_OFFSETS: [(i8, i8); 8] = [
+    (1, -1),
+    (1, 0),
+    (0, -1),
+    (1, 1),
+    (0, 1),
+    (-1, -1),
+    (-1, 0),
+    (-1, 1),
+];
 
 /// copied from rust source for unstable feature `get_many_mut`
 ///
@@ -84,6 +98,77 @@ pub unsafe fn slice_get_many_unchecked<T, const N: usize>(
     }
 }
 
+/// copied from rust source for unstable feature `get_many_mut`
+///
+/// adapted to take isize indices, where negative indices will set the output at that index to None
+///
+/// # Safety
+///
+/// Calling this method with overlapping or out-of-bounds indices is *[undefined behavior]*
+/// even if the resulting references are not used. Negative indices are allowed.
+#[inline]
+pub unsafe fn slice_ptr_get_many_unchecked_mut<'a, T, const N: usize>(
+    slice_ptr: NonNull<T>,
+    indices: [isize; N],
+) -> [Option<&'a mut T>; N] {
+    // NB: This implementation is written as it is because any variation of
+    // `indices.map(|i| self.get_unchecked_mut(i))` would make miri unhappy,
+    // or generate worse code otherwise. This is also why we need to go
+    // through a raw pointer here.
+    let mut arr: std::mem::MaybeUninit<[Option<&mut T>; N]> = std::mem::MaybeUninit::uninit();
+    let arr_ptr = arr.as_mut_ptr();
+
+    // SAFETY: We expect `indices` to contain disjunct values that are
+    // in bounds of `self`.
+    unsafe {
+        for i in 0..N {
+            let idx = *indices.get_unchecked(i);
+            if idx >= 0 {
+                *(*arr_ptr).get_unchecked_mut(i) =
+                    Some(&mut *(slice_ptr.as_ptr().add(idx as usize)));
+            } else {
+                *(*arr_ptr).get_unchecked_mut(i) = None;
+            }
+        }
+        arr.assume_init()
+    }
+}
+
+/// copied from rust source for unstable feature `get_many_mut`
+///
+/// adapted to take isize indices, where negative indices will set the output at that index to None
+///
+/// # Safety
+///
+/// Calling this method with overlapping or out-of-bounds indices is *[undefined behavior]*
+/// even if the resulting references are not used. Negative indices are allowed.
+#[inline]
+pub unsafe fn slice_ptr_get_many_unchecked<'a, T, const N: usize>(
+    slice_ptr: *const T,
+    indices: [isize; N],
+) -> [Option<&'a T>; N] {
+    // NB: This implementation is written as it is because any variation of
+    // `indices.map(|i| self.get_unchecked_mut(i))` would make miri unhappy,
+    // or generate worse code otherwise. This is also why we need to go
+    // through a raw pointer here.
+    let mut arr: std::mem::MaybeUninit<[Option<&T>; N]> = std::mem::MaybeUninit::uninit();
+    let arr_ptr = arr.as_mut_ptr();
+
+    // SAFETY: We expect `indices` to contain disjunct values that are
+    // in bounds of `self`.
+    unsafe {
+        for i in 0..N {
+            let idx = *indices.get_unchecked(i);
+            if idx >= 0 {
+                *(*arr_ptr).get_unchecked_mut(i) = Some(&*(slice_ptr.add(idx as usize)));
+            } else {
+                *(*arr_ptr).get_unchecked_mut(i) = None;
+            }
+        }
+        arr.assume_init()
+    }
+}
+
 #[inline]
 pub fn count_non_negative<const N: usize>(array: [isize; N]) -> usize {
     array.iter().filter(|&&v| v >= 0).count()
@@ -96,7 +181,7 @@ pub const fn zorder_n8_offsets() -> [IVec2; 8] {
 
 #[inline]
 pub fn zorder_n8_indices(coord: UVec2, size: USize2) -> [isize; 8] {
-    let c = |off: IVec2| -> isize {
+    let c = move |off: IVec2| -> isize {
         let new_coord = (coord.as_ivec2() + off).as_uvec2();
         if size.bounds_check(new_coord) {
             ZCoord::from(new_coord).to_index().0 as isize

@@ -5,8 +5,10 @@
 
 use std::marker::PhantomData;
 
-use bevy::math::{DVec2, Rect, UVec2, Vec2, Vec2Swizzles};
-use bevy::reflect;
+use bevy::{
+    math::{DVec2, Rect, UVec2, Vec2, Vec2Swizzles},
+    reflect,
+};
 
 use super::{DRect, DSize2, Size2, USize2};
 
@@ -197,8 +199,8 @@ pub enum Origin {
 
 impl<From: Space, To: Space> Transformer<From, To> {
     fn from_origins_and_scale(
-        from_center: DVec2,
-        to_center: DVec2,
+        from_origin: DVec2,
+        to_origin: DVec2,
         scale: DVec2,
         scale_mode: ScaleMode,
     ) -> Self {
@@ -209,7 +211,7 @@ impl<From: Space, To: Space> Transformer<From, To> {
         };
         Self {
             scale,
-            translation: to_center - from_center * scale,
+            translation: to_origin - from_origin * scale,
             from_marker: PhantomData,
             to_marker: PhantomData,
         }
@@ -242,7 +244,7 @@ impl TransformCoord<GameSpace, MapSpace> for Transformer<GameSpace, MapSpace> {
         )
     }
     fn transform(&self, coord: &Vec2) -> MapCoord2 {
-        MapCoord2(self.transform_dvec2(&coord.as_dvec2()))
+        MapCoord2(coord.as_dvec2())
     }
 }
 impl Transformer<MapSpace, GameSpace> {
@@ -255,7 +257,7 @@ impl Transformer<MapSpace, GameSpace> {
         )
     }
     pub fn transform(&self, coord: &MapCoord2) -> Vec2 {
-        self.transform_dvec2(&coord.0).as_vec2()
+        coord.0.as_vec2()
     }
 }
 
@@ -283,27 +285,38 @@ pub trait GridTransform: Space {
     fn ll_from_grid(&self, index: &Self::Index2) -> Self::Coord2;
     /// coord from grid index2, center of the cell
     fn center_from_grid(&self, index: &Self::Index2) -> Self::Coord2;
+    /// convert a coord anywhere in a cell, to the bottom left corner of that cell
+    #[inline]
+    fn ll_from_coord(&self, coord: &Self::Coord2) -> Self::Coord2 {
+        self.ll_from_grid(&self.to_grid_trunc(coord))
+    }
 }
 
 impl GridTransform for MapSpace {
+    #[inline]
     fn to_grid_trunc(&self, coord: &Self::Coord2) -> Self::Index2 {
         MapIndex2(((coord.0 - self.rect.min) / self.cell_size.0).as_uvec2())
     }
+    #[inline]
     fn ll_from_grid(&self, index: &Self::Index2) -> Self::Coord2 {
         MapCoord2((index.0.as_dvec2() * self.cell_size.0) + self.rect.min)
     }
+    #[inline]
     fn center_from_grid(&self, index: &Self::Index2) -> Self::Coord2 {
         MapCoord2(((index.0.as_dvec2() + 0.5) * self.cell_size.0) + self.rect.min)
     }
 }
 
 impl GridTransform for GeoGridSpace {
+    #[inline]
     fn to_grid_trunc(&self, coord: &Self::Coord2) -> Self::Index2 {
         GeoIndex2(((coord.0 - self.rect.min) / self.cell_size.0).as_uvec2())
     }
+    #[inline]
     fn ll_from_grid(&self, index: &Self::Index2) -> Self::Coord2 {
         GeoCoord2((index.0.as_dvec2() * self.cell_size.0) + self.rect.min)
     }
+    #[inline]
     fn center_from_grid(&self, index: &Self::Index2) -> Self::Coord2 {
         GeoCoord2(((index.0.as_dvec2() + 0.5) * self.cell_size.0) + self.rect.min)
     }
@@ -315,10 +328,12 @@ pub trait IndexTransform: Space {
 }
 
 impl IndexTransform for GeoGridSpace {
+    #[inline]
     fn flatten_index2(&self, index2: &Self::Index2) -> Self::Index {
         let stride = self.grid_size.width() as usize;
         GeoIndex(index2.0.x as usize + index2.0.y as usize * stride)
     }
+    #[inline]
     fn fold_index(&self, index: &Self::Index) -> Self::Index2 {
         let stride = self.grid_size.width() as usize;
         let x = index.0 % stride;
@@ -328,6 +343,7 @@ impl IndexTransform for GeoGridSpace {
 }
 
 /// finds the maximum size within bounds which maintains the aspect ratio.
+#[inline]
 fn max_size_with_aspect(original: UVec2, target: UVec2) -> UVec2 {
     let v = original * target.yx();
     if v.x > v.y {
@@ -336,6 +352,7 @@ fn max_size_with_aspect(original: UVec2, target: UVec2) -> UVec2 {
         UVec2::new(v.x / original.y, target.y)
     }
 }
+#[inline]
 fn max_size_with_aspect_d(original: DVec2, target: DVec2) -> DVec2 {
     let v = original * target.yx();
     if v.x > v.y {
@@ -345,9 +362,11 @@ fn max_size_with_aspect_d(original: DVec2, target: DVec2) -> DVec2 {
     }
 }
 
+#[inline]
 pub fn flatten_index2(index2: UVec2, width: u32) -> usize {
     index2.x as usize + width as usize * index2.y as usize
 }
+#[inline]
 pub fn flatten_index2_xy(x: u32, y: u32, width: u32) -> usize {
     x as usize + width as usize * y as usize
 }

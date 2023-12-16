@@ -47,8 +47,14 @@ pub struct Config {
     #[inspector(min = 0, max = 15, display = NumberDisplay::Slider)]
     pub climate_var: i32,
     //   water
-    pub rain_steps: i32,
+    #[inspector(min = 1, max = 10)]
+    pub rain_steps: u32,
+    /// percent of land cells to receive rain
+    // TODO: is this 0.0 to 1.0 or 0 to 100
+    #[inspector(min = 0.0, max = 1.0, speed = 0.05, display = NumberDisplay::Slider)]
     pub precip_percent: f32,
+    /// percent chance of raindrop infiltration
+    #[inspector(min = 0.0, max = 1.0, display = NumberDisplay::Slider)]
     pub infiltration: f32,
     //   soils
     pub soil_deg_rate: f32,
@@ -77,6 +83,9 @@ pub struct Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Self { ..default() }
+        Self {
+            precip_percent: 0.25,
+            ..default()
+        }
     }
 }

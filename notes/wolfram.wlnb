@@ -1,0 +1,157 @@
+{
+ "cells": [
+  {
+   "kind": 2,
+   "value": "$Assumptions=(coord|rectMin|cellSize|llCoord)\\[Element]Vectors[2, Reals]&&(index)\\[Element]Vectors[2, Integers]&&cellSize>0&&index>=0&&coord>=rectMin\r\ntoGridTrunc={coord,rectMin,cellSize}|->IntegerPart[(coord-rectMin)/cellSize]\r\nllFromGrid={index,rectMin,cellSize}|->index*cellSize+rectMin",
+   "languageId": "wolfram",
+   "outputs": [
+    {
+     "items": [
+      {
+       "data": "<div class=\"wexpr\"><wrow><w></w><wrow><w></w><wrow><w></w><wb>(</wb><wrow><w></w><w>coord</w><w>|</w><w>rectMin</w><w>|</w><w>cellSize</w><w>|</w><w>llCoord</w></wrow><wb>)</wb></wrow><w>∈</w><wrow><w></w><w>Vectors</w><wrow><w></w><wb>[</wb><wrow><w></w><w>2</w><w>,</w><wrow style=\"font-family:&quot;Times&quot;;\"><w></w><w>ℝ</w></wrow></wrow><wb>]</wb></wrow></wrow></wrow><w>&amp;&amp;</w><wrow><w></w><w>index</w><w>∈</w><wrow><w></w><w>Vectors</w><wrow><w></w><wb>[</wb><wrow><w></w><w>2</w><w>,</w><wrow style=\"font-family:&quot;Times&quot;;\"><w></w><w>ℤ</w></wrow></wrow><wb>]</wb></wrow></wrow></wrow><w>&amp;&amp;</w><wrow><w></w><w>cellSize</w><w>&gt;</w><w>0</w></wrow><w>&amp;&amp;</w><wrow><w></w><w>index</w><w>≥</w><w>0</w></wrow><w>&amp;&amp;</w><wrow><w></w><w>coord</w><w>≥</w><w>rectMin</w></wrow></wrow></div>",
+       "mime": "x-application/wolfram-language-html"
+      },
+      {
+       "data": "Element[coord | rectMin | cellSize | llCoord, Vectors[2, Reals]] && Element[index, Vectors[2, Integers]] && cellSize > 0 && index >= 0 && coord >= rectMin",
+       "mime": "text/plain"
+      }
+     ],
+     "id": "6af88d11-08ef-4854-8639-94539d5460b3",
+     "metadata": {
+      "cellLabel": "Out[1]= ",
+      "isBoxData": false
+     }
+    },
+    {
+     "items": [
+      {
+       "data": "<div class=\"wexpr\"><wrow><w></w><w>Function</w><wrow><w></w><wb>[</wb><wrow><w></w><wrow><w></w><wb>{</wb><wrow><w></w><w>coord</w><w>,</w><w>rectMin</w><w>,</w><w>cellSize</w></wrow><wb>}</wb></wrow><w>,</w><wrow><w></w><w>IntegerPart</w><wrow><w></w><wb>[</wb><wfrac><w><wrow><w></w><w>coord</w><w>-</w><w>rectMin</w></wrow></w><w><w></w><w><w>cellSize</w></w></w></wfrac><wb>]</wb></wrow></wrow></wrow><wb>]</wb></wrow></wrow></div>",
+       "mime": "x-application/wolfram-language-html"
+      },
+      {
+       "data": "Function[{coord, rectMin, cellSize}, IntegerPart[(coord - rectMin)/cellSize]]",
+       "mime": "text/plain"
+      }
+     ],
+     "id": "c0bd49a1-61df-443f-a2a9-19cfec057883",
+     "metadata": {
+      "cellLabel": "Out[2]= ",
+      "isBoxData": false
+     }
+    },
+    {
+     "items": [
+      {
+       "data": "<div class=\"wexpr\"><wrow><w></w><w>Function</w><wrow><w></w><wb>[</wb><wrow><w></w><wrow><w></w><wb>{</wb><wrow><w></w><w>index</w><w>,</w><w>rectMin</w><w>,</w><w>cellSize</w></wrow><wb>}</wb></wrow><w>,</w><wrow><w></w><wrow><w></w><w>index</w><w></w><w>cellSize</w></wrow><w>+</w><w>rectMin</w></wrow></wrow><wb>]</wb></wrow></wrow></div>",
+       "mime": "x-application/wolfram-language-html"
+      },
+      {
+       "data": "Function[{index, rectMin, cellSize}, index*cellSize + rectMin]",
+       "mime": "text/plain"
+      }
+     ],
+     "id": "884dba27-8965-4eb5-8869-e91eaa95afb8",
+     "metadata": {
+      "cellLabel": "Out[3]= ",
+      "isBoxData": false
+     }
+    }
+   ],
+   "metadata": {},
+   "executionSummary": {}
+  },
+  {
+   "kind": 2,
+   "value": "index=toGridTrunc[coord,rectMin,cellSize]",
+   "languageId": "wolfram",
+   "outputs": [
+    {
+     "items": [
+      {
+       "data": "<div class=\"wexpr\"><wrow><w></w><w>IntegerPart</w><wrow><w></w><wb>[</wb><wfrac><w><wrow><w></w><w>coord</w><w>-</w><w>rectMin</w></wrow></w><w><w></w><w><w>cellSize</w></w></w></wfrac><wb>]</wb></wrow></wrow></div>",
+       "mime": "x-application/wolfram-language-html"
+      },
+      {
+       "data": "IntegerPart[(coord - rectMin)/cellSize]",
+       "mime": "text/plain"
+      }
+     ],
+     "id": "ae40a43c-0a49-446a-b601-d0c2f568d7af",
+     "metadata": {
+      "cellLabel": "Out[4]= ",
+      "isBoxData": false
+     }
+    }
+   ],
+   "metadata": {},
+   "executionSummary": {}
+  },
+  {
+   "kind": 2,
+   "value": "llCoord=llFromGrid[index,rectMin,cellSize]",
+   "languageId": "wolfram",
+   "outputs": [
+    {
+     "items": [
+      {
+       "data": "<div class=\"wexpr\"><wrow><w></w><w>rectMin</w><w>+</w><wrow><w></w><w>cellSize</w><w></w><wrow><w></w><w>IntegerPart</w><wrow><w></w><wb>[</wb><wfrac><w><wrow><w></w><w>coord</w><w>-</w><w>rectMin</w></wrow></w><w><w></w><w><w>cellSize</w></w></w></wfrac><wb>]</wb></wrow></wrow></wrow></wrow></div>",
+       "mime": "x-application/wolfram-language-html"
+      },
+      {
+       "data": "rectMin + cellSize*IntegerPart[(coord - rectMin)/cellSize]",
+       "mime": "text/plain"
+      }
+     ],
+     "id": "ccf21527-53b9-4cf9-9f43-5a2c41c5bd72",
+     "metadata": {
+      "cellLabel": "Out[5]= ",
+      "isBoxData": false
+     }
+    }
+   ],
+   "metadata": {},
+   "executionSummary": {}
+  },
+  {
+   "kind": 2,
+   "value": "BarChart[Counts[RandomInteger[{1, 100000}, 1000]], ChartLabels -> Automatic]",
+   "languageId": "wolfram",
+   "outputs": [
+    {
+     "items": [
+      {
+       "data": "<div class=\"wexpr\"><wfailed title=\"The conversion to the box representation took too much time.\">Rendering failed</wfailed></div>",
+       "mime": "x-application/wolfram-language-html"
+      },
+      {
+       "data": "$Failed",
+       "mime": "text/plain"
+      }
+     ],
+     "id": "d6955628-b236-4b6b-bf1b-79042a7a9803",
+     "metadata": {
+      "cellLabel": "Out[2]= ",
+      "isBoxData": false
+     }
+    }
+   ],
+   "metadata": {},
+   "executionSummary": {
+    "timing": {
+     "startTime": 1702423954203,
+     "endTime": 1702424015472
+    },
+    "executionOrder": 2,
+    "success": true
+   }
+  },
+  {
+   "kind": 2,
+   "value": "",
+   "languageId": "wolfram",
+   "outputs": [],
+   "metadata": {},
+   "executionSummary": {}
+  }
+ ]
+}

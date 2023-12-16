@@ -11,22 +11,26 @@ use bevy::{
     transform::components::Transform,
 };
 use bevy_egui::egui::{lerp, remap};
+use rand::distributions::Uniform;
 
-use super::{cell::Cell, n8};
+use super::{cell::Cell, cell_grid::CellGrid, n8};
 use crate::{
+    ascii_grid::AsciiGrid,
     math::{
-        coord::{flatten_index2, GeoGridSpace, IndexTransform, MapIndex2, MapSpace, Transformer},
-        ZCoord, ZIndex,
+        coord::{
+            flatten_index2, GeoGridSpace, GridTransform, IndexTransform, MapIndex2, MapSpace,
+            Transformer,
+        },
+        DRect, ZCoord, ZIndex,
     },
-    preludes::{asset::*, cond::*, core::*, image::*, math::*, plugin::*, system::*},
-    GlobalRng, MyAssets, MyStates, MyUpdate,
+    preludes::{bevy::*, core::*},
+    MyAssets, MyStates, MyUpdate,
 };
 
 #[derive(Resource, reflect::Reflect, Debug, Default)]
 #[reflect(Resource)]
 pub struct Map {
-    #[reflect(ignore)]
-    cells: Vec<Cell>,
+    pub grid: CellGrid,
     space: MapSpace,
     modified: bool,
     land_cell_count: u32,
@@ -36,57 +40,8 @@ impl Map {
     pub fn space(&self) -> &MapSpace {
         &self.space
     }
-    pub fn cell_iter(&self) -> impl Iterator<Item = &Cell> {
-        let grid_size = self.space.grid_size();
-        self.cells
-            .iter()
-            .filter(|&cell| grid_size.bounds_check(cell.coord.into()))
-    }
-    pub fn cell_iter_mut(&mut self) -> impl Iterator<Item = &mut Cell> {
-        let grid_size = self.space.grid_size();
-        self.cells
-            .iter_mut()
-            .filter(|cell| grid_size.bounds_check(cell.coord.into()))
-    }
-    pub fn cell_land_iter(&self) -> impl Iterator<Item = &Cell> {
-        let grid_size = self.space.grid_size();
-        self.cells
-            .iter()
-            .filter(|&cell| grid_size.bounds_check(cell.coord.into()) && cell.is_land)
-    }
-    pub fn cell_land_iter_mut(&mut self) -> impl Iterator<Item = &mut Cell> {
-        let grid_size = self.space.grid_size();
-        self.cells
-            .iter_mut()
-            .filter(|cell| grid_size.bounds_check(cell.coord.into()) && cell.is_land)
-    }
-    pub fn cell_n8_iter_mut<Filter: Fn(&Cell) -> bool>(
-        &mut self,
-        filter_fn: Filter,
-    ) -> impl Iterator<Item = (&mut Cell, [Option<&mut Cell>; 8])> {
-        let grid_size = *self.space.grid_size();
-
-        let cells_ptr: *mut [Cell] = self.cells.as_mut_slice();
-
-        self.cells
-            .iter_mut()
-            .filter(move |cell| grid_size.bounds_check(cell.coord.into()) && filter_fn(cell))
-            .map(move |cell| {
-                let n8_indices = n8::zorder_n8_indices(cell.coord.into(), grid_size);
-                let n8s = unsafe { n8::slice_get_many_unchecked_mut(&mut *cells_ptr, n8_indices) };
-                (cell, n8s)
-            })
-    }
     fn set_cell_layout(&mut self, size: UVec2, view_rect: DRect) {
-        let len = zorder_data_len(size);
-        self.cells = Vec::with_capacity(len);
-        for i in 0..len {
-            self.cells.push(Cell {
-                coord: ZIndex::from(i).into(),
-                color: Color::RED,
-                ..default()
-            })
-        }
+        self.grid = CellGrid::new(size.into());
         self.space = MapSpace::from_rect(view_rect, size.into());
         assert!(size.x as usize * size.y as usize <= zorder_data_len(size));
     }
@@ -94,11 +49,8 @@ impl Map {
     fn load_ascii_grid<F: FnMut(&mut Cell, Option<i16>)>(&mut self, asset: &AsciiGrid, mut f: F) {
         let transform = Transformer::<MapSpace, GeoGridSpace>::new(&self.space, asset.space());
 
-        for cell in self.cells.iter_mut() {
+        for cell in self.grid.iter_mut() {
             let cell_coord = MapIndex2(cell.coord.into());
-            if !self.space.grid_size().bounds_check(cell_coord.0) {
-                continue;
-            }
             let map_coord = self.space.ll_from_grid(&cell_coord);
             let geo_coord = transform.transform(&map_coord);
             let sample = asset.sample_nearest(&geo_coord);
@@ -112,7 +64,7 @@ impl Map {
             self.space.rect().min,
         );
         let transform = Transformer::<MapSpace, GeoGridSpace>::new(&self.space, &image_space);
-        for cell in self.cells.iter_mut() {
+        for cell in self.grid.iter_all_mut() {
             let cell_coord = MapIndex2(cell.coord.into());
             if !self.space.grid_size().bounds_check(cell_coord.0) {
                 cell.color = Color::RED;
@@ -142,11 +94,8 @@ impl Map {
         let new_len = size.0 * size.1 * 4;
         data.resize(new_len, 0);
 
-        for cell in self.cells.iter() {
+        for cell in self.grid.iter() {
             let cell_coord: UVec2 = cell.coord.into();
-            if !self.space.grid_size().bounds_check(cell_coord) {
-                continue;
-            }
             // 4 bytes per coord
             let pixel_idx = (cell_coord.x as usize + cell_coord.y as usize * size.0) * 4;
             let color = if !only_land || cell.is_land {
@@ -171,41 +120,6 @@ impl Map {
             TextureFormat::Rgba8UnormSrgb,
         );
     }
-    pub fn get_cell(&self, coord: MapIndex2) -> Option<&Cell> {
-        if self.space.grid_size().bounds_check(coord.0) {
-            unsafe {
-                Some(
-                    self.cells
-                        .get_unchecked(ZCoord::from(coord.0).to_index().0 as usize),
-                )
-            }
-        } else {
-            None
-        }
-    }
-    pub fn get_neighbor8(&self, coord: MapIndex2) -> [Option<&Cell>; 8] {
-        unsafe {
-            n8::slice_get_many_unchecked(
-                self.cells.as_slice(),
-                n8::zorder_n8_indices(coord.0, *self.space.grid_size()),
-            )
-        }
-    }
-    pub fn neighbor8_count(&self, coord: MapIndex2) -> u8 {
-        let ns = self.get_neighbor8(coord);
-        let mut c: u8 = 0;
-        for cell in ns {
-            c += cell.is_some() as u8;
-        }
-        c
-    }
-    pub fn n8_count_with<F: Fn(&Cell) -> bool>(&self, coord: MapIndex2, f: F) -> u8 {
-        self.get_neighbor8(coord)
-            .iter()
-            .flatten()
-            .filter(|&&c| f(c))
-            .count() as u8
-    }
     /// storage is a temporary vector that will be cleared
     ///
     /// for each cell
@@ -226,12 +140,9 @@ impl Map {
         let mut n8_indices: [isize; 8];
 
         storage.clear();
-        storage.resize(self.cells.len(), default());
-        for cell in self.cells.iter_mut() {
+        storage.resize(self.grid.len(), default());
+        for cell in self.grid.iter_mut() {
             let coord = MapIndex2(cell.coord.into());
-            if !grid_size.bounds_check(coord.0) {
-                continue;
-            }
 
             n8_indices = n8::zorder_n8_indices(coord.0, grid_size);
             let n_count = n8::count_non_negative(n8_indices) as u8;
@@ -246,12 +157,7 @@ impl Map {
                 }
             }
         }
-        for (zidx, cell) in self.cells.iter_mut().enumerate() {
-            let coord = MapIndex2(cell.coord.into());
-            if !grid_size.bounds_check(coord.0) {
-                continue;
-            }
-
+        for (zidx, cell) in self.grid.iter_mut().enumerate() {
             apply_fn(cell, &storage[zidx]);
         }
     }
@@ -263,7 +169,6 @@ impl Map {
         get_fn: GetFn,
     ) {
         let grid_size = *self.space.grid_size();
-        let mut n8_indices: [isize; 8];
         let n8_offsets = n8::zorder_n8_offsets();
 
         output.clear();
@@ -272,15 +177,8 @@ impl Map {
             output.reserve_exact(out_len - output.capacity());
         }
         let out = output.spare_capacity_mut();
-        for cell in self.cells.iter() {
+        for (cell, cell_ns) in self.grid.iter_n8() {
             let coord = MapIndex2(cell.coord.into());
-            if !grid_size.bounds_check(coord.0) {
-                continue;
-            }
-
-            n8_indices = n8::zorder_n8_indices(coord.0, grid_size);
-            let cell_ns =
-                unsafe { n8::slice_get_many_unchecked(self.cells.as_slice(), n8_indices) };
 
             let mut sum: f64 = get_fn(cell) * kernel[1][1];
             for (i, c) in cell_ns.iter().enumerate() {
@@ -300,9 +198,9 @@ impl Map {
             output.set_len(out_len);
         }
     }
-    pub fn sum_cells<T: Default + std::ops::AddAssign, F: Fn(&Cell) -> T>(&self, f: F) -> T {
+    pub fn sum_cell_field<T: Default + std::ops::AddAssign, F: Fn(&Cell) -> T>(&self, f: F) -> T {
         let mut sum = T::default();
-        for cell in self.cell_iter() {
+        for cell in self.grid.iter() {
             sum += f(cell);
         }
         sum
@@ -323,7 +221,7 @@ impl Map {
             |c| c.elevation as f64,
         );
         let grid_size = *self.space.grid_size();
-        for cell in self.cell_iter_mut() {
+        for cell in self.grid.iter_mut() {
             let index2: UVec2 = cell.coord.into();
             let idx = flatten_index2(index2, grid_size.width());
             let grad_mag = DVec2::new(horiz_grad[idx], vert_grad[idx]).length();
@@ -341,7 +239,7 @@ impl Map {
         }
     }
     fn setup_land_cells(&mut self) {
-        for cell in self.cell_iter_mut().filter(|c| c.is_land) {
+        for cell in self.grid.iter_mut().filter(|c| c.is_land) {
             todo!();
         }
     }

@@ -11,7 +11,6 @@ pub struct ClimateCycle {
 pub fn update_climate_scenario(
     mut map: ResMut<Map>,
     mut cycle: ResMut<ClimateCycle>,
-    time: Res<SimulatedTime>,
     config: Res<Config>,
 ) {
     if config.enable_climate_cycle {
@@ -35,7 +34,7 @@ pub fn update_climate_scenario(
         }
     }
     if config.enable_climate_change {
-        for (cell, n8s) in map.cell_n8_iter_mut(|c| c.is_land) {
+        for (cell, n8s) in map.grid.iter_land_n8_mut() {
             let rain_mult = 1.0 + cycle.rainfall_change;
             let cleared_rainfall_effects =
                 n8s.iter().flatten().filter(|c| c.forest_state == 1).count() as f32

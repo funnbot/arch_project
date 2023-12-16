@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use arch_project::*;
+use arch_project::{sim::SimUpdate, *};
 use ascii_grid::AsciiGridPlugin;
 use bevy::{
     asset::AssetServer,
@@ -17,8 +17,7 @@ use bevy::{
 };
 use bevy_egui::{egui, EguiContexts, EguiPlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_prng::WyRand;
-use bevy_rand::plugin::EntropyPlugin;
+use bevy_rand::{plugin::EntropyPlugin, prelude::WyRand};
 use bevy_spatial::{kdtree::KDTree2, AutomaticUpdate, SpatialAccess, TransformMode};
 
 #[derive(Component, Default)]
